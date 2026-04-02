@@ -3,7 +3,6 @@ ChromaDB setup and retrieval.
 One collection per language: gsem_fr, gsem_en.
 """
 import logging
-from functools import lru_cache
 
 import chromadb
 from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
@@ -13,11 +12,11 @@ from . import config
 logger = logging.getLogger(__name__)
 
 # Singleton clients — initialised once per process
-_chroma_client: chromadb.PersistentClient | None = None
-_embedding_fn: SentenceTransformerEmbeddingFunction | None = None
+_chroma_client = None
+_embedding_fn = None
 
 
-def get_client() -> chromadb.PersistentClient:
+def get_client():
     global _chroma_client
     if _chroma_client is None:
         logger.info(f"Initialising ChromaDB at {config.CHROMA_PATH}")
@@ -25,7 +24,7 @@ def get_client() -> chromadb.PersistentClient:
     return _chroma_client
 
 
-def embedding_function() -> SentenceTransformerEmbeddingFunction:
+def embedding_function():
     global _embedding_fn
     if _embedding_fn is None:
         logger.info(f"Loading embedding model: {config.EMBEDDING_MODEL}")

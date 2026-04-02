@@ -4,10 +4,10 @@ Claude API integration — builds the prompt and calls the API.
 import anthropic
 from . import config
 
-_client: anthropic.Anthropic | None = None
+_client = None
 
 
-def get_client() -> anthropic.Anthropic:
+def get_client():
     global _client
     if _client is None:
         _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
