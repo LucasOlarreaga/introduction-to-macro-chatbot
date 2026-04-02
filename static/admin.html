@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IntegrAI Admin – GSEM</title>
+  <link rel="icon" type="image/jpeg" href="/static/logo.jpg" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="admin-wrapper">
+
+    <!-- Admin login (shown until authenticated) -->
+    <div class="admin-card admin-login" id="login-panel">
+      <div class="login-header" style="margin-bottom:22px;">
+        <img src="/static/logo.jpg" alt="GSEM" />
+        <div>
+          <h1 style="font-size:1.1rem;">Admin Panel</h1>
+          <p style="font-size:0.78rem;color:var(--text-muted);">IntegrAI – GSEM</p>
+        </div>
+      </div>
+      <div class="login-form">
+        <label for="admin-pwd">Admin Password</label>
+        <input type="password" id="admin-pwd" placeholder="Enter admin password"
+               onkeydown="if(event.key==='Enter') adminLogin()" />
+        <div class="error-msg" id="admin-error"></div>
+        <button class="btn-primary" onclick="adminLogin()">Sign In</button>
+      </div>
+    </div>
+
+    <!-- Main admin panel (hidden until authenticated) -->
+    <div class="admin-card" id="admin-panel" style="display:none;">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <h1>Document Manager</h1>
+        <button class="btn-icon" style="color:var(--text-muted);border-color:var(--border);"
+                onclick="adminLogout()">Logout</button>
+      </div>
+      <p class="subtitle">Upload, view, and delete course documents indexed by IntegrAI.</p>
+
+      <!-- Upload section -->
+      <div class="section-title">Upload New Document</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Language / Course Version</label>
+          <select id="upload-lang">
+            <option value="fr">French (FR)</option>
+            <option value="en">English (EN)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Document Type</label>
+          <select id="upload-type">
+            <option value="slides">Slides</option>
+            <option value="textbooks">Textbook</option>
+            <option value="problem_sets">Problem Set</option>
+            <option value="exams">Exam</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="drop-zone" id="drop-zone"
+           onclick="document.getElementById('file-input').click()"
+           ondragover="onDragOver(event)"
+           ondragleave="onDragLeave(event)"
+           ondrop="onDrop(event)">
+        <div class="icon">📄</div>
+        <div id="drop-label">Click or drag &amp; drop a PDF here</div>
+      </div>
+      <input type="file" id="file-input" accept=".pdf" style="display:none;"
+             onchange="onFileSelected(event)" />
+
+      <button class="btn-upload" id="upload-btn" disabled onclick="uploadFile()">
+        Upload &amp; Index
+      </button>
+      <div class="status-msg" id="upload-status"></div>
+
+      <div style="margin-top:32px;"></div>
+
+      <!-- Document list -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div class="section-title" style="margin-bottom:0;border:none;">Indexed Documents</div>
+        <button class="btn-icon" style="color:var(--text-muted);border-color:var(--border);font-size:0.8rem;"
+                onclick="loadDocuments()">↻ Refresh</button>
+      </div>
+
+      <div id="doc-list-area">
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:12px;">Loading…</p>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let adminToken = sessionStorage.getItem("gsem_admin_token") || "";
+    let selectedFile = null;
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    if (adminToken) showPanel();
+
+    async function adminLogin() {
+      const pwd = document.getElementById("admin-pwd").value;
+      const err = document.getElementById("admin-error");
+      err.textContent = "";
+
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwd }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        adminToken = data.token;
+        sessionStorage.setItem("gsem_admin_token", adminToken);
+        showPanel();
+      } else {
+        err.textContent = "Invalid admin password.";
+      }
+    }
+
+    function adminLogout() {
+      adminToken = "";
+      sessionStorage.removeItem("gsem_admin_token");
+      document.getElementById("login-panel").style.display = "";
+      document.getElementById("admin-panel").style.display = "none";
+    }
+
+    function showPanel() {
+      document.getElementById("login-panel").style.display = "none";
+      document.getElementById("admin-panel").style.display = "";
+      loadDocuments();
+    }
+
+    function authHeaders() {
+      return { "Authorization": `Bearer ${adminToken}` };
+    }
+
+    // ── File selection ────────────────────────────────────────────────────────
+    function onFileSelected(e) {
+      const file = e.target.files[0];
+      if (file) setFile(file);
+    }
+
+    function onDragOver(e) {
+      e.preventDefault();
+      document.getElementById("drop-zone").classList.add("dragover");
+    }
+
+    function onDragLeave(e) {
+      document.getElementById("drop-zone").classList.remove("dragover");
+    }
+
+    function onDrop(e) {
+      e.preventDefault();
+      document.getElementById("drop-zone").classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".pdf")) setFile(file);
+    }
+
+    function setFile(file) {
+      selectedFile = file;
+      document.getElementById("drop-label").textContent = `Selected: ${file.name}`;
+      document.getElementById("upload-btn").disabled = false;
+    }
+
+    // ── Upload ────────────────────────────────────────────────────────────────
+    async function uploadFile() {
+      if (!selectedFile) return;
+
+      const lang = document.getElementById("upload-lang").value;
+      const docType = document.getElementById("upload-type").value;
+      const statusEl = document.getElementById("upload-status");
+      const btn = document.getElementById("upload-btn");
+
+      btn.disabled = true;
+      statusEl.textContent = "Uploading and indexing…";
+      statusEl.className = "status-msg";
+
+      const fd = new FormData();
+      fd.append("file", selectedFile);
+      fd.append("lang", lang);
+      fd.append("doc_type", docType);
+
+      try {
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          headers: authHeaders(),
+          body: fd,
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          statusEl.textContent = `✓ Indexed "${data.filename}" — ${data.pages_indexed} page(s) added.`;
+          statusEl.className = "status-msg ok";
+          selectedFile = null;
+          document.getElementById("drop-label").textContent = "Click or drag & drop a PDF here";
+          document.getElementById("file-input").value = "";
+          loadDocuments();
+        } else {
+          const err = await res.json();
+          statusEl.textContent = `Error: ${err.detail || "Upload failed."}`;
+          statusEl.className = "status-msg err";
+          btn.disabled = false;
+        }
+      } catch {
+        statusEl.textContent = "Connection error. Please try again.";
+        statusEl.className = "status-msg err";
+        btn.disabled = false;
+      }
+    }
+
+    // ── Document list ─────────────────────────────────────────────────────────
+    async function loadDocuments() {
+      const area = document.getElementById("doc-list-area");
+      area.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;margin-top:12px;">Loading…</p>';
+
+      try {
+        const res = await fetch("/api/admin/documents", { headers: authHeaders() });
+        if (!res.ok) { area.innerHTML = "<p>Failed to load documents.</p>"; return; }
+
+        const docs = await res.json();
+
+        if (docs.length === 0) {
+          area.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;margin-top:12px;">No documents indexed yet.</p>';
+          return;
+        }
+
+        const table = document.createElement("table");
+        table.className = "doc-table";
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Lang</th>
+              <th>Type</th>
+              <th>Pages</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="doc-tbody"></tbody>
+        `;
+
+        const tbody = table.querySelector("#doc-tbody");
+        docs.forEach(doc => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${doc.filename}</td>
+            <td><span class="badge badge-${doc.lang}">${doc.lang.toUpperCase()}</span></td>
+            <td>${formatType(doc.type)}</td>
+            <td>${doc.pages}</td>
+            <td>
+              <button class="btn-delete"
+                onclick="deleteDoc('${doc.lang}','${doc.type}','${doc.filename}',this)">
+                Delete
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        area.innerHTML = "";
+        area.appendChild(table);
+      } catch {
+        area.innerHTML = "<p>Error loading documents.</p>";
+      }
+    }
+
+    async function deleteDoc(lang, type, filename, btn) {
+      if (!confirm(`Delete "${filename}" from the ${lang.toUpperCase()} index? This cannot be undone.`)) return;
+      btn.disabled = true;
+      btn.textContent = "…";
+
+      const params = new URLSearchParams({ lang, doc_type: type, filename });
+      const res = await fetch(`/api/admin/documents?${params}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+
+      if (res.ok) loadDocuments();
+      else { btn.disabled = false; btn.textContent = "Delete"; alert("Delete failed."); }
+    }
+
+    function formatType(type) {
+      return { slides: "Slides", textbooks: "Textbook", problem_sets: "Problem Set", exams: "Exam" }[type] || type;
+    }
+  </script>
+</body>
+</html>

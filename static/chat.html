@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IntegrAI – GSEM</title>
+  <link rel="icon" type="image/jpeg" href="/static/logo.jpg" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="chat-layout">
+
+    <!-- Header -->
+    <header class="chat-header">
+      <img src="/static/logo.jpg" alt="GSEM" />
+      <span class="title">IntegrAI Assistant – GSEM</span>
+
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-fr" onclick="setLang('fr')">FR</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+
+      <button class="btn-icon" id="logout-btn" onclick="logout()">—</button>
+    </header>
+
+    <!-- Messages -->
+    <main class="chat-messages" id="chat-messages">
+      <!-- Welcome message injected by JS -->
+    </main>
+
+    <!-- Input -->
+    <footer class="chat-input-area">
+      <div class="input-row">
+        <textarea
+          class="chat-input"
+          id="chat-input"
+          rows="1"
+          placeholder="—"
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()">—</button>
+      </div>
+      <p class="lang-banner" id="lang-banner">—</p>
+    </footer>
+
+  </div>
+
+  <script>
+    // ── i18n ────────────────────────────────────────────────────────────────
+    const t = {
+      fr: {
+        logout: "Déconnexion",
+        placeholder: "Posez votre question…",
+        send: "Envoyer",
+        banner: "Mode Français — documents du cours en français",
+        welcome: "Bonjour ! Je suis IntegrAI, votre assistant pédagogique GSEM. Posez-moi une question sur les documents du cours.",
+        sources: "Sources",
+        thinking: "Réflexion en cours…",
+        error: "Une erreur s'est produite. Veuillez réessayer.",
+        no_sources: "Aucune source trouvée dans les documents.",
+        session_expired: "Session expirée. Redirection vers la page de connexion…",
+      },
+      en: {
+        logout: "Logout",
+        placeholder: "Ask your question…",
+        send: "Send",
+        banner: "English Mode — searching English course documents",
+        welcome: "Hello! I am IntegrAI, your GSEM pedagogical assistant. Ask me anything about the course materials.",
+        sources: "Sources",
+        thinking: "Thinking…",
+        error: "An error occurred. Please try again.",
+        no_sources: "No sources found in the documents.",
+        session_expired: "Session expired. Redirecting to login…",
+      },
+    };
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let lang = localStorage.getItem("gsem_lang") || "fr";
+    let history = [];   // [{role, content}] — clean turns only
+    let waiting = false;
+
+    const token = localStorage.getItem("gsem_token");
+    if (!token) window.location.href = "/";
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    window.addEventListener("DOMContentLoaded", () => {
+      applyLang(lang);
+      appendWelcome();
+    });
+
+    // ── Language ─────────────────────────────────────────────────────────────
+    function setLang(l) {
+      if (l === lang) return;
+      lang = l;
+      localStorage.setItem("gsem_lang", l);
+      applyLang(l);
+      // Clear conversation when switching language
+      history = [];
+      document.getElementById("chat-messages").innerHTML = "";
+      appendWelcome();
+    }
+
+    function applyLang(l) {
+      const tx = t[l];
+      document.getElementById("btn-fr").classList.toggle("active", l === "fr");
+      document.getElementById("btn-en").classList.toggle("active", l === "en");
+      document.getElementById("logout-btn").textContent = tx.logout;
+      document.getElementById("chat-input").placeholder = tx.placeholder;
+      document.getElementById("send-btn").textContent = tx.send;
+      document.getElementById("lang-banner").textContent = tx.banner;
+      document.documentElement.lang = l;
+    }
+
+    // ── Auth ─────────────────────────────────────────────────────────────────
+    function logout() {
+      localStorage.removeItem("gsem_token");
+      localStorage.removeItem("gsem_lang");
+      window.location.href = "/";
+    }
+
+    // ── Message rendering ─────────────────────────────────────────────────────
+    function appendWelcome() {
+      appendMessage("assistant", t[lang].welcome, []);
+    }
+
+    function appendMessage(role, content, sources) {
+      const container = document.getElementById("chat-messages");
+
+      const row = document.createElement("div");
+      row.className = `msg-row ${role}`;
+
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = role === "user" ? "You" : "AI";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.textContent = content;
+
+      if (role === "assistant" && sources && sources.length > 0) {
+        const srcBlock = document.createElement("div");
+        srcBlock.className = "sources-block";
+
+        const srcTitle = document.createElement("div");
+        srcTitle.className = "sources-title";
+        srcTitle.textContent = `📚 ${t[lang].sources} (${sources.length})`;
+
+        const srcList = document.createElement("div");
+        srcList.className = "sources-list";
+
+        sources.forEach(s => {
+          const item = document.createElement("div");
+          item.className = "source-item";
+          const typeLabel = formatType(s.type);
+          item.textContent = `${s.filename}${s.page ? `, p.${s.page}` : ""}${typeLabel ? ` — ${typeLabel}` : ""}`;
+          srcList.appendChild(item);
+        });
+
+        srcBlock.appendChild(srcTitle);
+        srcBlock.appendChild(srcList);
+        bubble.appendChild(srcBlock);
+      }
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+      return bubble;
+    }
+
+    function appendTyping() {
+      const container = document.getElementById("chat-messages");
+      const row = document.createElement("div");
+      row.className = "msg-row assistant";
+      row.id = "typing-row";
+
+      const avatar = document.createElement("div");
+      avatar.className = "msg-avatar";
+      avatar.textContent = "AI";
+
+      const bubble = document.createElement("div");
+      bubble.className = "msg-bubble";
+      bubble.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
+
+      row.appendChild(avatar);
+      row.appendChild(bubble);
+      container.appendChild(row);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById("typing-row");
+      if (el) el.remove();
+    }
+
+    function formatType(type) {
+      const map = {
+        slides: "Slides",
+        textbooks: "Textbook",
+        problem_sets: "Problem Set",
+        exams: "Exam",
+      };
+      return map[type] || type;
+    }
+
+    // ── Input helpers ─────────────────────────────────────────────────────────
+    function handleKey(e) {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    }
+
+    function autoResize(el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 160) + "px";
+    }
+
+    // ── Send ──────────────────────────────────────────────────────────────────
+    async function sendMessage() {
+      if (waiting) return;
+      const input = document.getElementById("chat-input");
+      const message = input.value.trim();
+      if (!message) return;
+
+      input.value = "";
+      input.style.height = "auto";
+      waiting = true;
+      document.getElementById("send-btn").disabled = true;
+
+      // Show user message
+      appendMessage("user", message, []);
+
+      // Show typing indicator
+      appendTyping();
+
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ message, language: lang, history }),
+        });
+
+        removeTyping();
+
+        if (res.status === 401) {
+          alert(t[lang].session_expired);
+          logout();
+          return;
+        }
+
+        if (!res.ok) {
+          appendMessage("assistant", t[lang].error, []);
+        } else {
+          const data = await res.json();
+          appendMessage("assistant", data.reply, data.sources);
+
+          // Store clean turns in history
+          history.push({ role: "user", content: message });
+          history.push({ role: "assistant", content: data.reply });
+
+          // Keep history to last 10 turns to avoid token bloat
+          if (history.length > 20) history = history.slice(-20);
+        }
+      } catch {
+        removeTyping();
+        appendMessage("assistant", t[lang].error, []);
+      }
+
+      waiting = false;
+      document.getElementById("send-btn").disabled = false;
+      input.focus();
+    }
+  </script>
+</body>
+</html>

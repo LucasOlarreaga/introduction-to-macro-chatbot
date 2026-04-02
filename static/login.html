@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IntegrAI – GSEM</title>
+  <link rel="icon" type="image/jpeg" href="/static/logo.jpg" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="login-wrapper">
+    <div class="login-card">
+
+      <div class="login-header">
+        <img src="/static/logo.jpg" alt="GSEM Logo" />
+        <div>
+          <h1>IntegrAI Assistant – GSEM</h1>
+          <p>Guiding Responsible AI in Teaching</p>
+        </div>
+      </div>
+
+      <div class="privacy-box">
+        <h2>IntegrAI Assistant – GSEM</h2>
+        <p><em>Guiding Responsible AI in Teaching : The AI pedagogical companion of GSEM faculty.</em></p>
+        <p style="margin-top:10px;">
+          This platform supports you in integrating Generative AI into your teaching and assessment
+          practices, in alignment with the guidelines validated by the GSEM AI Taskforce.
+          It is designed to help you:
+        </p>
+        <ul style="margin-top:8px;">
+          <li>Strategically incorporate AI into course design</li>
+          <li>Develop academically rigorous learning activities</li>
+          <li>Rethink assessment methods in the AI era</li>
+          <li>Ensure alignment with institutional standards and academic integrity principles</li>
+        </ul>
+
+        <h3>Responsible Use</h3>
+        <p>
+          This assistant provides structured guidance based exclusively on validated institutional
+          documents. It does not replace academic judgment or institutional policy. Faculty members
+          remain solely responsible for:
+        </p>
+        <ul style="margin-top:8px;">
+          <li>Final pedagogical decisions</li>
+          <li>The validation of generated content</li>
+          <li>Compliance with academic and data protection standards</li>
+        </ul>
+        <p style="margin-top:10px;">
+          <strong>No confidential or student-sensitive data should be entered into the system.</strong>
+        </p>
+
+        <p class="powered" style="margin-top:14px; font-weight:600;">Powered By GSEM</p>
+      </div>
+
+      <div class="acknowledge-row">
+        <input type="checkbox" id="ack" />
+        <label for="ack">
+          I acknowledge that this assistant is a support tool that may generate inaccuracies,
+          the verification of which remains my responsibility.
+        </label>
+      </div>
+
+      <div class="login-form">
+        <label for="password">Access Password</label>
+        <input
+          type="password"
+          id="password"
+          placeholder="Enter password"
+          autocomplete="current-password"
+        />
+        <div class="error-msg" id="error-msg"></div>
+        <button class="btn-primary" id="login-btn" disabled onclick="doLogin()">
+          Access IntegrAI
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const ack = document.getElementById("ack");
+    const loginBtn = document.getElementById("login-btn");
+    const pwdInput = document.getElementById("password");
+    const errorMsg = document.getElementById("error-msg");
+
+    ack.addEventListener("change", () => {
+      loginBtn.disabled = !ack.checked;
+    });
+
+    pwdInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !loginBtn.disabled) doLogin();
+    });
+
+    async function doLogin() {
+      errorMsg.textContent = "";
+      loginBtn.disabled = true;
+      loginBtn.textContent = "…";
+
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: pwdInput.value }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          localStorage.setItem("gsem_token", data.token);
+          window.location.href = "/chat";
+        } else {
+          errorMsg.textContent = "Incorrect password. Please try again.";
+          loginBtn.disabled = false;
+          loginBtn.textContent = "Access IntegrAI";
+        }
+      } catch {
+        errorMsg.textContent = "Connection error. Please refresh and try again.";
+        loginBtn.disabled = false;
+        loginBtn.textContent = "Access IntegrAI";
+      }
+    }
+  </script>
+</body>
+</html>
