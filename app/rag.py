@@ -29,7 +29,8 @@ def embedding_function():
     if _embedding_fn is None:
         logger.info(f"Loading embedding model: {config.EMBEDDING_MODEL}")
         _embedding_fn = SentenceTransformerEmbeddingFunction(
-            model_name=config.EMBEDDING_MODEL
+            model_name=config.EMBEDDING_MODEL,
+            show_progress_bar=False,
         )
     return _embedding_fn
 
