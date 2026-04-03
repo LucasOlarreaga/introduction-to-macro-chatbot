@@ -15,7 +15,7 @@ SEED_PDFS_PATH: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "
 
 EMBEDDING_MODEL: str = "paraphrase-multilingual-mpnet-base-v2"
 CLAUDE_MODEL: str = "claude-sonnet-4-6"
-TOP_K_RESULTS: int = 5
+TOP_K_RESULTS: int = 15
 
 DOC_TYPES = ["slides", "textbooks", "problem_sets", "exams"]
 LANGUAGES = ["fr", "en"]
