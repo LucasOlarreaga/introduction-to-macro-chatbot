@@ -237,19 +237,55 @@ def _query_chunks(
     return chunks
 
 
+def _get_all_chunks_from_files(
+    collection: chromadb.Collection,
+    filenames: list[str],
+) -> list[dict]:
+    """
+    Fetch EVERY indexed page from the given files, sorted by filename then
+    page number.  Used when we know exactly which document the user wants —
+    the whole thing should be available, not just the top-K similar pages.
+    """
+    results = collection.get(
+        where={"filename": {"$in": filenames}},
+        include=["documents", "metadatas"],
+    )
+    chunks = []
+    for doc, meta in zip(results["documents"], results["metadatas"]):
+        chunks.append({
+            "text": doc,
+            "filename": meta.get("filename", ""),
+            "page": meta.get("page", "?"),
+            "type": meta.get("type", ""),
+            "score": 1.0,
+        })
+    # Return in reading order
+    chunks.sort(key=lambda c: (c["filename"], c["page"] if isinstance(c["page"], int) else 0))
+    return chunks
+
+
 def _priority_retrieve(
     collection: chromadb.Collection,
     query: str,
     n_results: int,
     primary_where: dict,
     fallback_where: dict | None = None,
+    primary_filenames: list[str] | None = None,
 ) -> list[dict]:
     """
-    Retrieve up to n_results chunks, prioritising documents that match
-    primary_where.  Remaining slots are filled from fallback_where (or
-    the full collection if fallback_where is None).
+    Retrieve chunks, prioritising a primary set.
+
+    If primary_filenames is provided, ALL pages from those files are fetched
+    in reading order (no semantic cap) — this is used when the user asks about
+    a specific week's slides or a specific problem set.
+
+    Remaining context slots are filled with a semantic search using fallback_where.
     """
-    primary = _query_chunks(collection, query, n_results, where=primary_where)
+    if primary_filenames is not None:
+        primary = _get_all_chunks_from_files(collection, primary_filenames)
+    else:
+        primary = _query_chunks(collection, query, n_results, where=primary_where)
+
     remaining = n_results - len(primary)
     if remaining <= 0:
         return primary
@@ -289,11 +325,12 @@ def retrieve(query: str, lang: str, n_results: int = None) -> list[dict]:
         if ps_num:
             filenames = _get_filenames_for_problem_set(collection, ps_num)
             if filenames:
-                logger.debug(f"Specific PS/TP-{ps_num} detected → {filenames}")
+                logger.debug(f"Specific PS/TP-{ps_num} detected → {filenames} (full fetch)")
                 return _priority_retrieve(
                     collection, query, n_results,
                     primary_where={"filename": {"$in": filenames}},
                     fallback_where={"filename": {"$nin": filenames}},
+                    primary_filenames=filenames,
                 )
         # No specific number — prioritise all problem_sets over other types
         logger.debug("Generic problem-set query detected.")
@@ -308,11 +345,12 @@ def retrieve(query: str, lang: str, n_results: int = None) -> list[dict]:
     if week_num:
         filenames = _get_filenames_for_week(collection, week_num)
         if filenames:
-            logger.debug(f"Week-{week_num} query detected → {filenames}")
+            logger.debug(f"Week-{week_num} query detected → {filenames} (full fetch)")
             return _priority_retrieve(
                 collection, query, n_results,
                 primary_where={"filename": {"$in": filenames}},
-                fallback_where={"filename": {"$nin": filenames}} if filenames else None,
+                fallback_where={"filename": {"$nin": filenames}},
+                primary_filenames=filenames,
             )
 
     # --- 3. French slide-N priority ---
@@ -321,11 +359,12 @@ def retrieve(query: str, lang: str, n_results: int = None) -> list[dict]:
         if slide_num:
             filenames = _get_filenames_for_fr_slide(collection, slide_num)
             if filenames:
-                logger.debug(f"FR slide-{slide_num} query detected → {filenames}")
+                logger.debug(f"FR slide-{slide_num} query detected → {filenames} (full fetch)")
                 return _priority_retrieve(
                     collection, query, n_results,
                     primary_where={"filename": {"$in": filenames}},
-                    fallback_where={"filename": {"$nin": filenames}} if filenames else None,
+                    fallback_where={"filename": {"$nin": filenames}},
+                    primary_filenames=filenames,
                 )
 
     # --- 4. Default unfiltered search ---
