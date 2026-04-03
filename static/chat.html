@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IntegrAI – GSEM</title>
+  <title>MacroBot – GSEM</title>
   <link rel="icon" type="image/jpeg" href="/static/logo.jpg" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -13,11 +13,16 @@
     <!-- Header -->
     <header class="chat-header">
       <img src="/static/logo.jpg" alt="GSEM" />
-      <span class="title">IntegrAI Assistant – GSEM</span>
+      <span class="title">MacroBot – GSEM</span>
 
       <div class="lang-toggle">
         <button class="lang-btn active" id="btn-fr" onclick="setLang('fr')">FR</button>
         <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+
+      <div class="lang-toggle" id="mode-toggle">
+        <button class="lang-btn active" id="btn-direct" onclick="setMode('direct')">—</button>
+        <button class="lang-btn" id="btn-guide" onclick="setMode('guide')">—</button>
       </div>
 
       <button class="btn-icon" id="logout-btn" onclick="logout()">—</button>
@@ -53,30 +58,35 @@
         logout: "Déconnexion",
         placeholder: "Posez votre question…",
         send: "Envoyer",
-        banner: "Mode Français — documents du cours en français",
-        welcome: "Bonjour ! Je suis IntegrAI, votre assistant pédagogique GSEM. Posez-moi une question sur les documents du cours.",
-        sources: "Sources",
+        banner_direct: "Mode Français · Réponses directes",
+        banner_guide:  "Mode Français · Pédagogue — guidage socratique",
+        mode_direct: "Direct",
+        mode_guide:  "Pédagogue",
+        welcome_direct: "Bonjour ! Je suis MacroBot, votre assistant GSEM. Posez-moi une question sur les documents du cours et je vous répondrai directement.",
+        welcome_guide:  "Bonjour ! Je suis en mode Pédagogue. Je ne vous donnerai pas les réponses directement — je vous guiderai par des questions pour que vous les trouviez vous-même.",
         thinking: "Réflexion en cours…",
         error: "Une erreur s'est produite. Veuillez réessayer.",
-        no_sources: "Aucune source trouvée dans les documents.",
         session_expired: "Session expirée. Redirection vers la page de connexion…",
       },
       en: {
         logout: "Logout",
         placeholder: "Ask your question…",
         send: "Send",
-        banner: "English Mode — searching English course documents",
-        welcome: "Hello! I am IntegrAI, your GSEM pedagogical assistant. Ask me anything about the course materials.",
-        sources: "Sources",
+        banner_direct: "English Mode · Direct answers",
+        banner_guide:  "English Mode · Guide — Socratic questioning",
+        mode_direct: "Direct",
+        mode_guide:  "Guide",
+        welcome_direct: "Hello! I am MacroBot, your GSEM assistant. Ask me anything about the course materials and I will answer directly.",
+        welcome_guide:  "Hello! I am in Guide mode. I won't give you answers directly — I will ask questions and give hints to help you find them yourself.",
         thinking: "Thinking…",
         error: "An error occurred. Please try again.",
-        no_sources: "No sources found in the documents.",
         session_expired: "Session expired. Redirecting to login…",
       },
     };
 
     // ── State ────────────────────────────────────────────────────────────────
     let lang = localStorage.getItem("gsem_lang") || "fr";
+    let mode = localStorage.getItem("gsem_mode") || "direct";
     let history = [];   // [{role, content}] — clean turns only
     let waiting = false;
 
@@ -86,6 +96,7 @@
     // ── Boot ─────────────────────────────────────────────────────────────────
     window.addEventListener("DOMContentLoaded", () => {
       applyLang(lang);
+      applyMode(mode);
       appendWelcome();
     });
 
@@ -108,8 +119,28 @@
       document.getElementById("logout-btn").textContent = tx.logout;
       document.getElementById("chat-input").placeholder = tx.placeholder;
       document.getElementById("send-btn").textContent = tx.send;
-      document.getElementById("lang-banner").textContent = tx.banner;
+      document.getElementById("lang-banner").textContent = tx[mode === "guide" ? "banner_guide" : "banner_direct"];
       document.documentElement.lang = l;
+    }
+
+    // ── Mode ──────────────────────────────────────────────────────────────────
+    function setMode(m) {
+      if (m === mode) return;
+      mode = m;
+      localStorage.setItem("gsem_mode", m);
+      applyMode(m);
+      history = [];
+      document.getElementById("chat-messages").innerHTML = "";
+      appendWelcome();
+    }
+
+    function applyMode(m) {
+      const tx = t[lang];
+      document.getElementById("btn-direct").classList.toggle("active", m === "direct");
+      document.getElementById("btn-guide").classList.toggle("active", m === "guide");
+      document.getElementById("btn-direct").textContent = tx.mode_direct;
+      document.getElementById("btn-guide").textContent = tx.mode_guide;
+      document.getElementById("lang-banner").textContent = tx[m === "guide" ? "banner_guide" : "banner_direct"];
     }
 
     // ── Auth ─────────────────────────────────────────────────────────────────
@@ -121,7 +152,8 @@
 
     // ── Message rendering ─────────────────────────────────────────────────────
     function appendWelcome() {
-      appendMessage("assistant", t[lang].welcome, []);
+      const key = mode === "guide" ? "welcome_guide" : "welcome_direct";
+      appendMessage("assistant", t[lang][key], []);
     }
 
     function appendMessage(role, content, sources) {
@@ -132,35 +164,19 @@
 
       const avatar = document.createElement("div");
       avatar.className = "msg-avatar";
-      avatar.textContent = role === "user" ? "You" : "AI";
+      if (role === "user") {
+        avatar.textContent = "You";
+      } else {
+        const img = document.createElement("img");
+        img.src = "/static/logo.jpg";
+        img.alt = "MacroBot";
+        avatar.appendChild(img);
+      }
 
       const bubble = document.createElement("div");
       bubble.className = "msg-bubble";
       bubble.textContent = content;
 
-      if (role === "assistant" && sources && sources.length > 0) {
-        const srcBlock = document.createElement("div");
-        srcBlock.className = "sources-block";
-
-        const srcTitle = document.createElement("div");
-        srcTitle.className = "sources-title";
-        srcTitle.textContent = `📚 ${t[lang].sources} (${sources.length})`;
-
-        const srcList = document.createElement("div");
-        srcList.className = "sources-list";
-
-        sources.forEach(s => {
-          const item = document.createElement("div");
-          item.className = "source-item";
-          const typeLabel = formatType(s.type);
-          item.textContent = `${s.filename}${s.page ? `, p.${s.page}` : ""}${typeLabel ? ` — ${typeLabel}` : ""}`;
-          srcList.appendChild(item);
-        });
-
-        srcBlock.appendChild(srcTitle);
-        srcBlock.appendChild(srcList);
-        bubble.appendChild(srcBlock);
-      }
 
       row.appendChild(avatar);
       row.appendChild(bubble);
@@ -242,7 +258,7 @@
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
           },
-          body: JSON.stringify({ message, language: lang, history }),
+          body: JSON.stringify({ message, language: lang, mode, history }),
         });
 
         removeTyping();

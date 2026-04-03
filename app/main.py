@@ -95,6 +95,7 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     language: str           # "fr" or "en"
+    mode: str = "direct"    # "direct" or "guide"
     history: list[Message] = []
 
 
@@ -102,6 +103,8 @@ class ChatRequest(BaseModel):
 def chat(body: ChatRequest, _role: str = Depends(require_user)):
     if body.language not in config.LANGUAGES:
         raise HTTPException(status_code=400, detail="Invalid language")
+    if body.mode not in ("direct", "guide"):
+        raise HTTPException(status_code=400, detail="Invalid mode")
 
     # Retrieve relevant document chunks
     chunks = retrieve(body.message, body.language)
@@ -110,7 +113,7 @@ def chat(body: ChatRequest, _role: str = Depends(require_user)):
     history = [{"role": m.role, "content": m.content} for m in body.history]
 
     # Generate response
-    reply = generate_response(body.message, chunks, history, body.language)
+    reply = generate_response(body.message, chunks, history, body.language, body.mode)
     sources = format_sources(chunks)
 
     return {

@@ -268,7 +268,8 @@ body {
 }
 
 .msg-row.user .msg-avatar { background: var(--blue-mid); color: var(--white); }
-.msg-row.assistant .msg-avatar { background: var(--gold); color: var(--blue-dark); }
+.msg-row.assistant .msg-avatar { background: transparent; padding: 0; overflow: hidden; }
+.msg-row.assistant .msg-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 
 .msg-bubble {
   background: var(--white);
