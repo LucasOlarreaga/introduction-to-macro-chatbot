@@ -4,10 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MacroBot – GSEM</title>
-  <link rel="icon" type="image/jpeg" href="/static/logo.jpg" />
+  <link rel="icon" type="image/jpeg" href="/static/macrobot.jpg" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
-<body>
+<body class="dark-chat">
   <div class="chat-layout">
 
     <!-- Header -->
@@ -168,7 +168,7 @@
         avatar.textContent = "You";
       } else {
         const img = document.createElement("img");
-        img.src = "/static/logo.jpg";
+        img.src = "/static/macrobot.jpg";
         img.alt = "MacroBot";
         avatar.appendChild(img);
       }

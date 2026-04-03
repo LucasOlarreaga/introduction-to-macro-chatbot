@@ -547,6 +547,35 @@ body {
 /* Admin login overlay */
 .admin-login { max-width: 380px; }
 
+/* ── Chat dark mode ───────────────────────────────────────────────────────── */
+body.dark-chat {
+  --bg:         #0f1117;
+  --white:      #1a1f2e;
+  --text:       #e2e8f0;
+  --text-muted: #8b9ab0;
+  --border:     #2a3042;
+  --blue-light: #1a2540;
+  --shadow:     0 2px 12px rgba(0,0,0,.4);
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Inputs & textareas don't inherit CSS vars for bg/color — set explicitly */
+body.dark-chat .chat-input {
+  background: #12161f;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark-chat .chat-input::placeholder { color: var(--text-muted); }
+
+body.dark-chat .chat-input-area {
+  background: #12161f;
+  border-top-color: var(--border);
+}
+
+body.dark-chat .lang-banner { color: var(--text-muted); }
+
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .login-card { padding: 28px 20px; }
