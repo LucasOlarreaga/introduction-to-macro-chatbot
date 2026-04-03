@@ -30,7 +30,6 @@ def embedding_function():
         logger.info(f"Loading embedding model: {config.EMBEDDING_MODEL}")
         _embedding_fn = SentenceTransformerEmbeddingFunction(
             model_name=config.EMBEDDING_MODEL,
-            show_progress_bar=False,
         )
     return _embedding_fn
 
