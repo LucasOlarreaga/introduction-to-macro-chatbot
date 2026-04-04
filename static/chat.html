@@ -170,6 +170,7 @@
         const img = document.createElement("img");
         img.src = "/static/macrobot.jpg";
         img.alt = "MacroBot";
+        img.onerror = () => { avatar.textContent = "AI"; img.remove(); };
         avatar.appendChild(img);
       }
 

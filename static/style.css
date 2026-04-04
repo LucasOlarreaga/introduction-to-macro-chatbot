@@ -548,21 +548,30 @@ body {
 .admin-login { max-width: 380px; }
 
 /* ── Chat dark mode ───────────────────────────────────────────────────────── */
+/*
+ * Palette inspired by accessible dark UIs (good contrast ratios throughout):
+ *   bg        #1e2030  — main canvas
+ *   surface   #2a2d3e  — cards / bubbles
+ *   input     #252836  — text inputs
+ *   border    #44475a  — subtle separators
+ *   text      #cdd6f4  — primary (≥ 7:1 on surface)
+ *   muted     #a6adc8  — secondary (≥ 4.5:1 on surface)
+ */
 body.dark-chat {
-  --bg:         #0f1117;
-  --white:      #1a1f2e;
-  --text:       #e2e8f0;
-  --text-muted: #8b9ab0;
-  --border:     #2a3042;
-  --blue-light: #1a2540;
-  --shadow:     0 2px 12px rgba(0,0,0,.4);
+  --bg:         #1e2030;
+  --white:      #2a2d3e;
+  --text:       #cdd6f4;
+  --text-muted: #a6adc8;
+  --border:     #44475a;
+  --blue-light: #1e2d50;
+  --shadow:     0 2px 12px rgba(0,0,0,.35);
   background: var(--bg);
   color: var(--text);
 }
 
-/* Inputs & textareas don't inherit CSS vars for bg/color — set explicitly */
+/* Inputs & textareas need explicit bg/color — they don't inherit CSS vars */
 body.dark-chat .chat-input {
-  background: #12161f;
+  background: #252836;
   color: var(--text);
   border-color: var(--border);
 }
@@ -570,11 +579,18 @@ body.dark-chat .chat-input {
 body.dark-chat .chat-input::placeholder { color: var(--text-muted); }
 
 body.dark-chat .chat-input-area {
-  background: #12161f;
+  background: #252836;
   border-top-color: var(--border);
 }
 
 body.dark-chat .lang-banner { color: var(--text-muted); }
+
+/* Keep user bubble readable — slightly lighter blue in dark mode */
+body.dark-chat .msg-row.user .msg-bubble {
+  background: #3b4c7c;
+  border-color: #3b4c7c;
+  color: #cdd6f4;
+}
 
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
