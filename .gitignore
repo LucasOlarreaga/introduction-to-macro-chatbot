@@ -13,3 +13,4 @@ data/
 *.jpeg
 *.png
 !static/logo.jpg
+!static/macrobot.jpg

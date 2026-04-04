@@ -569,6 +569,18 @@ body.dark-chat {
   color: var(--text);
 }
 
+/* Header buttons — var(--white) becomes a dark surface in dark mode, so override explicitly */
+body.dark-chat .btn-icon {
+  color: rgba(255,255,255,.85);
+  border-color: rgba(255,255,255,.3);
+}
+body.dark-chat .lang-btn { color: rgba(255,255,255,.65); }
+body.dark-chat .lang-btn.active {
+  background: rgba(255,255,255,.92);
+  color: #1e2030;
+}
+body.dark-chat .send-btn { color: #cdd6f4; }
+
 /* Inputs & textareas need explicit bg/color — they don't inherit CSS vars */
 body.dark-chat .chat-input {
   background: #252836;
