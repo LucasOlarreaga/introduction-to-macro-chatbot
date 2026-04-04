@@ -569,6 +569,9 @@ body.dark-chat {
   color: var(--text);
 }
 
+/* Header text color — var(--white) is a dark surface in dark mode */
+body.dark-chat .chat-header { color: #cdd6f4; }
+
 /* Header buttons — var(--white) becomes a dark surface in dark mode, so override explicitly */
 body.dark-chat .btn-icon {
   color: rgba(255,255,255,.85);
