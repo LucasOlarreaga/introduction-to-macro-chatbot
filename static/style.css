@@ -592,6 +592,62 @@ body.dark-chat .msg-row.user .msg-bubble {
   color: #cdd6f4;
 }
 
+/* ── Login dark mode ──────────────────────────────────────────────────────── */
+body.dark-login {
+  --bg:         #1e2030;
+  --white:      #2a2d3e;
+  --text:       #cdd6f4;
+  --text-muted: #a6adc8;
+  --border:     #44475a;
+  --blue-dark:  #7b9fd4;
+  --blue-mid:   #89b4fa;
+  --blue-light: #1e2d50;
+  --shadow:     0 2px 12px rgba(0,0,0,.35);
+  background: var(--bg);
+  color: var(--text);
+}
+
+body.dark-login .login-card {
+  background: var(--white);
+  box-shadow: var(--shadow);
+}
+
+body.dark-login .login-header h1 { color: var(--blue-mid); }
+body.dark-login .login-header p  { color: var(--text-muted); }
+
+body.dark-login .privacy-box {
+  background: #1e2d50;
+  border-color: var(--border);
+  color: var(--text);
+}
+
+body.dark-login .privacy-box h2,
+body.dark-login .privacy-box h3 { color: var(--blue-mid); }
+
+body.dark-login .privacy-box .powered { color: var(--text-muted); }
+
+body.dark-login .acknowledge-row { color: var(--text); }
+
+body.dark-login .login-form label { color: var(--blue-mid); }
+
+body.dark-login .login-form input[type="password"] {
+  background: #252836;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+body.dark-login .login-form input[type="password"]::placeholder { color: var(--text-muted); }
+body.dark-login .login-form input[type="password"]:focus { border-color: var(--blue-mid); }
+
+body.dark-login .btn-primary {
+  background: #3b4c7c;
+  color: #cdd6f4;
+}
+
+body.dark-login .btn-primary:hover:not(:disabled) { background: #4a5f9a; }
+
+body.dark-login .error-msg { color: #f38ba8; }
+
 /* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
   .login-card { padding: 28px 20px; }
