@@ -9,6 +9,7 @@ ADMIN_PASSWORD: str = os.environ.get("ADMIN_PASSWORD", "gsem-admin-2025")
 SECRET_KEY: str = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
 CHROMA_PATH: str = os.environ.get("CHROMA_PATH", "/data/chroma")
 PDFS_PATH: str = os.environ.get("PDFS_PATH", "/data/pdfs")
+PROMPTS_PATH: str = os.environ.get("PROMPTS_PATH", "/data/prompts.json")
 
 # Seed PDFs bundled in the repo — copied to PDFS_PATH on first boot if not already there
 SEED_PDFS_PATH: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "pdfs")

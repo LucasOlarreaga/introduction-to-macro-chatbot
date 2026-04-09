@@ -13,6 +13,7 @@ from .auth import create_token, require_user, require_admin
 from .ingest import ingest_seed_pdfs, ingest_uploaded_pdf, list_indexed_documents, delete_document
 from .rag import retrieve
 from .chat import generate_response, format_sources
+from .prompts import load_prompts, save_prompts
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -146,6 +147,22 @@ async def upload_document(
     content = await file.read()
     pages = ingest_uploaded_pdf(content, file.filename, lang, doc_type)
     return {"filename": file.filename, "pages_indexed": pages}
+
+
+@app.get("/api/admin/prompts")
+def get_prompts(_role: str = Depends(require_admin)):
+    return load_prompts()
+
+
+class PromptsRequest(BaseModel):
+    direct: str
+    guide: str
+
+
+@app.put("/api/admin/prompts")
+def update_prompts(body: PromptsRequest, _role: str = Depends(require_admin)):
+    save_prompts(body.direct.strip(), body.guide.strip())
+    return {"ok": True}
 
 
 @app.delete("/api/admin/documents")
