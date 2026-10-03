@@ -3,7 +3,7 @@ Claude API integration — builds the prompt and calls the API.
 """
 import anthropic
 from . import config
-from .prompts import build_system_prompt
+from .prompts import build_system_prompt, load_model
 
 _client = None
 
@@ -13,6 +13,17 @@ def get_client():
     if _client is None:
         _client = anthropic.Anthropic(api_key=config.ANTHROPIC_API_KEY)
     return _client
+
+def list_models() -> list[dict]:
+    """Return all models available on this API key, newest first."""
+    client = get_client()
+    models = client.models.list()
+    return sorted(
+        [{"id": m.id, "label": m.display_name} for m in models],
+        key=lambda m: m["id"],
+        reverse=True,
+    )
+
 
 CONTEXT_TEMPLATE = """--- DOCUMENT CONTEXT ---
 {context}
@@ -77,7 +88,7 @@ def generate_response(
 
     client = get_client()
     response = client.messages.create(
-        model=config.CLAUDE_MODEL,
+        model=load_model(),
         max_tokens=2048,
         system=system,
         messages=messages,

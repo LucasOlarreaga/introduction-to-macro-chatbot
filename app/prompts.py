@@ -1,5 +1,5 @@
 """
-Prompt management — load and save system prompts from disk.
+Prompt and model configuration — load and save from disk.
 The {lang_label} language rule is intentionally excluded from the editable
 prompts and is always appended by chat.py at runtime.
 """
@@ -44,33 +44,53 @@ Your behaviour rules:
 _LANGUAGE_RULE = "\nYou only have access to the {lang_label} version of the course materials."
 
 
-def _prompts_path() -> Path:
+def _config_path() -> Path:
     return Path(config.PROMPTS_PATH)
+
+
+def _read_config() -> dict:
+    path = _config_path()
+    if path.exists():
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as e:
+            logger.warning(f"Failed to read config from {path}: {e}")
+    return {}
+
+
+def _write_config(data: dict) -> None:
+    path = _config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_prompts() -> dict:
     """Return {'direct': str, 'guide': str}, falling back to defaults if not saved yet."""
-    path = _prompts_path()
-    if path.exists():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            return {
-                "direct": data.get("direct", DEFAULT_DIRECT),
-                "guide": data.get("guide", DEFAULT_GUIDE),
-            }
-        except Exception as e:
-            logger.warning(f"Failed to load prompts from {path}: {e} — using defaults")
-    return {"direct": DEFAULT_DIRECT, "guide": DEFAULT_GUIDE}
+    data = _read_config()
+    return {
+        "direct": data.get("direct", DEFAULT_DIRECT),
+        "guide": data.get("guide", DEFAULT_GUIDE),
+    }
 
 
 def save_prompts(direct: str, guide: str) -> None:
-    """Persist both prompts to disk."""
-    path = _prompts_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
-        json.dumps({"direct": direct, "guide": guide}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    """Persist both prompts to disk, preserving other config keys."""
+    data = _read_config()
+    data["direct"] = direct
+    data["guide"] = guide
+    _write_config(data)
+
+
+def load_model() -> str:
+    """Return the currently configured model id, falling back to config default."""
+    return _read_config().get("model", config.CLAUDE_MODEL)
+
+
+def save_model(model_id: str) -> None:
+    """Persist the chosen model id to disk, preserving other config keys."""
+    data = _read_config()
+    data["model"] = model_id
+    _write_config(data)
 
 
 def build_system_prompt(mode: str, lang_label: str) -> str:

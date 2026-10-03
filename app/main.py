@@ -12,8 +12,8 @@ from . import config
 from .auth import create_token, require_user, require_admin
 from .ingest import ingest_seed_pdfs, ingest_uploaded_pdf, list_indexed_documents, delete_document
 from .rag import retrieve
-from .chat import generate_response, format_sources
-from .prompts import load_prompts, save_prompts
+from .chat import generate_response, format_sources, list_models
+from .prompts import load_prompts, save_prompts, load_model, save_model
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -147,6 +147,24 @@ async def upload_document(
     content = await file.read()
     pages = ingest_uploaded_pdf(content, file.filename, lang, doc_type)
     return {"filename": file.filename, "pages_indexed": pages}
+
+
+@app.get("/api/admin/models")
+def get_models(_role: str = Depends(require_admin)):
+    return {"models": list_models(), "current": load_model()}
+
+
+class ModelRequest(BaseModel):
+    model: str
+
+
+@app.put("/api/admin/model")
+def update_model(body: ModelRequest, _role: str = Depends(require_admin)):
+    try:
+        save_model(body.model)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, "model": body.model}
 
 
 @app.get("/api/admin/prompts")
