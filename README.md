@@ -1,4 +1,4 @@
-# IntegrAI — GSEM Chatbot
+# GSEM Chatbot
 
 An AI teaching assistant for the Geneva School of Economics and Management (GSEM). Students ask questions about course materials; the bot answers using only the uploaded documents, with full source citations.
 
